@@ -5,6 +5,9 @@ mapr_client_mapr_version: "5.2.0"
 # oozie uses this var to open perms in /opt/mapr/hadoop/hadoop-2.x.x/etc/hadoop/core-site.xml
 mapr_client_hadoop_version: "2.7.0"
 
+# oozie uses this var to open perms in /opt/mapr/oozie/oozie-4.2.0/conf/oozie-site.xml
+mapr_client_oozie_version: "4.2.0"
+
 mapr_client_user: "mapr"
 mapr_client_group: "mapr"
 mapr_client_uid: "1000"

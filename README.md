@@ -5,7 +5,7 @@
 * Virtualbox 5.0.20 r106931
 
 ###Prerequisites
-* This guide uses a default 5.2 Mapr cluster installation, therefore the following configuration details are already established endpoints and servers on the hosts ```mapr[1:3].lan``` (See the screenshot for service details.)
+* This guide uses a default 5.2 Mapr cluster installation, therefore the following configuration details are already established endpoints on the mapr cluster hosts ```mapr[1:3].lan``` (See the screenshot for service details.)
 * The Mapr cluster name has been set to ```mapr.cluster.lan```
 * CLDB Node: ```mapr2.lan:7222```
 * History Server: ```mapr3.lan```
@@ -116,4 +116,46 @@ mapr@mapr1:~$ maprcli node services -name resourcemanager -action restart -nodes
 Test connection:
 ```
 mapr@mclient2:~$ /opt/mapr/oozie/oozie-4.2.0/bin/oozie admin -status
+```
+
+Run Example oozie yarn jobs:
+```
+mapr@mclient1:/opt/mapr/oozie/oozie-4.2.0$ tar xvfz ./oozie-examples.tar.gz -C /opt/mapr/oozie/oozie-4.2.0/
+mapr@mclient1:/opt/mapr/oozie/oozie-4.2.0$ /opt/mapr/hadoop/hadoop-2.7.0/bin/hadoop fs -put examples maprfs:///user/mapr/examples
+mapr@mclient1:/opt/mapr/oozie/oozie-4.2.0$ /opt/mapr/hadoop/hadoop-2.7.0/bin/hadoop fs -put examples/input-data maprfs:///user/mapr/input-data
+mapr@mclient1:/opt/mapr/oozie/oozie-4.2.0$ /opt/mapr/hadoop/hadoop-2.7.0/bin/hadoop fs -chmod -R 777 maprfs:///user/mapr/examples
+mapr@mclient1:/opt/mapr/oozie/oozie-4.2.0$ /opt/mapr/oozie/oozie-4.2.0/bin/oozie job -oozie="http://mapr3.lan:11000/oozie" -config /opt/mapr/oozie/oozie-4.2.0/examples/apps/map-reduce/job.properties -run
+
+mapr@mclient1:/opt/mapr/oozie/oozie-4.2.0$ yarn application -list
+16/09/09 06:27:44 INFO client.MapRZKBasedRMFailoverProxyProvider: Updated RM address to mapr2.lan/10.0.0.129:8032
+Total number of applications (application-types: [] and states: [SUBMITTED, ACCEPTED, RUNNING]):1
+                Application-Id	    Application-Name	    Application-Type	      User	     Queue	             State	       Final-State	       Progress	                       Tracking-URL
+application_1473389464865_0003	oozie:action:T=map-reduce:W=map-reduce-wf:A=mr-node:ID=0000000-160828220950359-oozie-mapr-W	           MAPREDUCE	      mapr	 root.mapr	           RUNNING	         UNDEFINED	             5%	             http://mapr2.lan:36076
+
+
+mapr@mclient1:/opt/mapr/oozie/oozie-4.2.0$ /opt/mapr/oozie/oozie-4.2.0/bin/oozie job -info 0000000-160828220950359-oozie-mapr-W
+Job ID : 0000000-160828220950359-oozie-mapr-W
+------------------------------------------------------------------------------------------------------------------------------------
+Workflow Name : map-reduce-wf
+App Path      : maprfs:/user/mapr/examples/apps/map-reduce/workflow.xml
+Status        : SUCCEEDED
+Run           : 0
+User          : mapr
+Group         : -
+Created       : 2016-09-09 06:27 GMT
+Started       : 2016-09-09 06:27 GMT
+Last Modified : 2016-09-09 06:28 GMT
+Ended         : 2016-09-09 06:28 GMT
+CoordAction ID: -
+
+Actions
+------------------------------------------------------------------------------------------------------------------------------------
+ID                                                                            Status    Ext ID                 Ext Status Err Code  
+------------------------------------------------------------------------------------------------------------------------------------
+0000000-160828220950359-oozie-mapr-W@:start:                                  OK        -                      OK         -         
+------------------------------------------------------------------------------------------------------------------------------------
+0000000-160828220950359-oozie-mapr-W@mr-node                                  OK        job_1473389464865_0002 SUCCEEDED  -         
+------------------------------------------------------------------------------------------------------------------------------------
+0000000-160828220950359-oozie-mapr-W@end                                      OK        -                      OK         -         
+------------------------------------------------------------------------------------------------------------------------------------
 ```
