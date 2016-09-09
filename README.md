@@ -5,7 +5,7 @@
 * Virtualbox 5.0.20 r106931
 
 ###Prerequisites
-* This guide uses a default 5.2 Mapr cluster installation, therefore the following configuration details are already established endpoints on the mapr cluster hosts ```mapr[1:3].lan``` (See the screenshot for service details.)
+* This guide uses a default [5.2 Mapr cluster installation](http://maprdocs.mapr.com/home/AdvancedInstallation/c_get_started_install.html), therefore the following configuration details are already established endpoints on the mapr cluster hosts ```mapr[1:3].lan``` (See the screenshot for service details.)
 * The Mapr cluster name has been set to ```mapr.cluster.lan```
 * CLDB Node: ```mapr2.lan:7222```
 * History Server: ```mapr3.lan```
