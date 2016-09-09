@@ -1,0 +1,32 @@
+---
+
+- name: Configure Mapr client
+  register: mapr_client_conf_output
+  shell: "/opt/mapr/server/configure.sh -N {{ mapr_client_cluster_name }} -c -C {{ mapr_client_cldb_nodes }} -HS {{ mapr_client_history_server_node }} -Z {{ mapr_client_zookeeper_list }}"
+  args:
+    executable: /bin/bash
+
+- name: Debug Mapr configuration
+  debug:
+    var: mapr_client_conf_output.stdout_lines
+
+- name: Ensure JAVA_HOME environment variable set
+  lineinfile:
+    dest: /etc/environment
+    line: "JAVA_HOME={{ mapr_client_java_home }}"
+    regexp: "^JAVA_HOME=.*$"
+
+- name: Ensure additional environment variables set
+  lineinfile:
+    dest: "{{ item.dest }}"
+    line: "{{ item.line }}"
+    regexp: "{{ item.regexp }}"
+  with_items: "{{ mapr_client_env_vars }}"
+
+- name: Template /opt/mapr/hadoop/hadoop-{{ mapr_client_hadoop_version }}/etc/hadoop/core-site.xml
+  template:
+    src: "core-site.xml"
+    dest: "/opt/mapr/hadoop/hadoop-{{ mapr_client_hadoop_version }}/etc/hadoop/core-site.xml"
+
+- name: Reconfigure for oozie
+  shell: "/opt/mapr/server/configure.sh -R -N {{ mapr_client_cluster_name }} -c -C {{ mapr_client_cldb_nodes }} -HS {{ mapr_client_history_server_node }} -Z {{ mapr_client_zookeeper_list }}"

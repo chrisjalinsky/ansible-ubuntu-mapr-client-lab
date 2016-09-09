@@ -1,0 +1,4 @@
+.DS_Store
+.vagrant
+ansible/*.retry
+mclient_id_rsa

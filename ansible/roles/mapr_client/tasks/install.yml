@@ -1,0 +1,50 @@
+---
+
+- name: Add Mapr apt key
+  apt_key:
+    url: "http://package.mapr.com/releases/pub/maprgpg.key"
+
+- name: Install Java and Mapr repositories
+  apt_repository:
+    repo: "{{ item.repo }}"
+    update_cache: yes
+  with_items:
+    - repo: "deb http://package.mapr.com/releases/ecosystem-5.x/ubuntu binary/"
+    - repo: "deb http://package.mapr.com/releases/v{{mapr_client_mapr_version}}/ubuntu/ mapr optional"
+    - repo: "ppa:webupd8team/java"
+
+- name: Run dpkg -l against package list
+  register: dpkg_list
+  shell: "dpkg -l | grep {{ item.name }}"
+  with_items: "{{ mapr_client_install_packages }}"
+
+- name: Debug dpkg_list.stdout
+  debug:
+    var: dpkg_list
+
+- name: Workaround for the Ansible 2.2 way to install unsigned pkgs
+  when: mapr_client_install_packages is defined and mapr_client_install_packages|length > 0
+  shell: apt-get update --allow-unauthenticated
+
+#- name: Workaround for the Ansible 2.2 way to install mapr-kafka
+#  shell: apt-get install mapr-kafka -y --allow-unauthenticated 
+
+- name: Workaround for the Ansible 2.2 way to install packages
+  when: ( mapr_client_install_packages is defined and mapr_client_install_packages|length > 0 )
+  shell: apt-get install {{ item.name }} -y --allow-unauthenticated
+  with_items: "{{ mapr_client_install_packages }}"
+
+- name: Set debconf selections for java
+  debconf: name='oracle-java{{ mapr_client_java_version }}-installer' question='shared/accepted-oracle-license-v1-1' value='true' vtype='select'
+
+- name: Workaround for the Ansible 2.2 allow deb conf vtype seen
+  shell: echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections
+
+- name: Install Oracle Java {{ mapr_client_java_version }} and Maven 3
+  apt:
+    name: "{{ item }}"
+    update_cache: yes
+    cache_valid_time: 3600
+  with_items:
+    - "oracle-java{{ mapr_client_java_version }}-installer"
+    - "maven"

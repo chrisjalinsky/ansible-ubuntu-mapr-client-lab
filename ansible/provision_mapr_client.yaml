@@ -1,0 +1,22 @@
+---
+
+- name: Provision Mapr client
+  hosts: mapr_client_servers
+  become: yes
+  become_user: root
+  roles:
+    - role: mapr_client
+      mapr_client_cluster_name: "mapr.cluster.lan"
+      mapr_client_cldb_nodes: "mapr1.lan:7222"
+      mapr_client_history_server_node: "mapr3.lan"
+      mapr_client_zookeeper_list: "mapr1.lan:5181,mapr2.lan:5181,mapr3.lan:5181"
+      mapr_client_uid: "1000"
+      mapr_client_gid: "1000"
+      mapr_client_install_packages:
+        - name: mapr-kafka
+        - name: mapr-oozie
+      mapr_client_env_vars:
+        - dest: /etc/environment
+          line: "OOZIE_URL='http://mapr3.lan:11000/oozie'"
+          regexp: "^OOZIE_URL=.*$"
+    - role: mapr_streams_sample_apps
