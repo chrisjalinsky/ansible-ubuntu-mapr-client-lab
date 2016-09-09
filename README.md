@@ -13,6 +13,8 @@
 * DNS has been established within the network, resolving forward and reverse records for these hosts.
 * Bridged setup. Although this could easily be done with static IPs.
 
+####Note: This repo is heavily inspired by the following [Mapr streaming data from racing cars demo](https://github.com/mapr-demos/racing-time-series)
+
 ###Vagrantfile
 The ```vagrant up``` command will, by default, build 2 mapr-client hosts using the ansible/hosts.yaml API compatible file. Thereforw we use the dynamic inventory script to read the hosts.yaml file. Adjust as necessary.
 
