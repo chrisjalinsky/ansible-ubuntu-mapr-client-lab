@@ -1,0 +1,14 @@
+---
+
+- name: Ensure git installed
+  apt:
+    name: git
+    state: installed
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Ensure demo git repo downloaded
+  git:
+    repo: "https://github.com/vicenteg/spark-streaming-mapr-streams.git"
+    update: no
+    dest: "/opt/spark-streaming-mapr-streams"

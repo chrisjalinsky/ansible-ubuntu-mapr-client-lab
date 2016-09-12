@@ -13,7 +13,9 @@
 * DNS has been established within the network, resolving forward and reverse records for these hosts.
 * Bridged setup. Although this could easily be done with static IPs.
 
+
 ####Note: This repo is heavily inspired by the following [Mapr streaming data from racing cars demo](https://github.com/mapr-demos/racing-time-series)
+Spark libraries have been commented out because the download was taking so long for me. Need to clean up the installation plays
 
 ###Vagrantfile
 The ```vagrant up``` command will, by default, build 2 mapr-client hosts using the ansible/hosts.yaml API compatible file. Thereforw we use the dynamic inventory script to read the hosts.yaml file. Adjust as necessary.
@@ -31,17 +33,15 @@ ansible-playbook provision_mapr_clients.yaml -i inventory.py
 
 ##mapr-kafka
 ###Mapr Streams
-On a Mapr cluster node, complete the following.
+On a Mapr cluster node, complete the following stream and topic creation.
 
 ####Create the Mapr streams:
 ```
 maprcli stream create -path /sample-stream
+```
+####Mapr introduces permissions into streams, therefore open permissions for writing
+```
 maprcli stream edit -path /sample-stream -produceperm p -consumeperm p -topicperm p
-```
-
-####List the Stream topics
-```
-maprcli stream topic list -path /sample-stream
 ```
 
 ####Create the topics:
@@ -50,7 +50,10 @@ $ maprcli stream topic create -path /sample-stream  -topic fast-messages
 $ maprcli stream topic create -path /sample-stream  -topic summary-markers
 ```
 
-##Key Ansible commands
+####List the Stream topics
+```
+maprcli stream topic list -path /sample-stream
+```
 
 ####Configure the Mapr client:
 ```
@@ -58,10 +61,18 @@ $ maprcli stream topic create -path /sample-stream  -topic summary-markers
 ```
 
 ##Mapr Sample Apps:
-The lab environment uses a sample Git repo as a basis. Check out this [https://github.com/mapr-demos/mapr-streams-sample-programs](Git Repo) for more information.
+The lab environment uses a sample Git repo as a basis. Follow this [Git repo](https://github.com/mapr-demos/mapr-streams-sample-programs) for more information.
+The mapr_client ansible role installs Java8 and Maven to compile the examples.
 
-###Startup a Producer on mclient1:
+###Compile the examples on the mclients with Maven:
 ```
+mapr@mclient1:/opt/mapr-streams-sample-programs$ mvn package
+mapr@mclient2:/opt/mapr-streams-sample-programs$ mvn package
+```
+
+###Startup a producer on mclient1:
+```
+cd target
 java -cp `mapr classpath`:./mapr-streams-examples-1.0-SNAPSHOT-jar-with-dependencies.jar com.mapr.examples.Run producer
 ```
 
@@ -161,3 +172,113 @@ ID                                                                            St
 0000000-160828220950359-oozie-mapr-W@end                                      OK        -                      OK         -         
 ------------------------------------------------------------------------------------------------------------------------------------
 ```
+##mapr-spark
+For the Spark installation, I decided to try the Mapr installer to add additional nodes. This worked flawlessly, so I decided to use it instead.
+The following Mapr Demos and snippets are ran from the new node, mapredge1.lan
+
+###Mapr-spark-streaming
+
+####Git clone 
+```
+git clone https://github.com/caroljmcdonald/mapr-streams-spark ~/mapr-streams-spark
+```
+####Add to Maprfs
+```
+hadoop fs -put ~/mapr-streams-spark /apps
+```
+####Create Stream and Topics
+```
+maprcli stream create -path /apps/mapr-streams-spark/stream -produceperm p -consumeperm p -topicperm p
+maprcli stream topic create -path /apps/mapr-streams-spark/stream -topic cdrs -partitions 3
+maprcli stream topic create -path /apps/mapr-streams-spark/stream -topic cdrp -partitions 3
+```
+
+```
+hadoop fs -mkdir /apps/stest
+hadoop fs -chmod 0777 /apps/stest
+maprcli stream create -path /apps/stest/stream -produceperm p -consumeperm p -topicperm p
+maprcli stream topic create -path /apps/stest/stream -topic cdrs -partitions 3
+maprcli stream topic create -path /apps/stest/stream -topic cdrp -partitions 3
+```
+
+```
+hadoop fs -mkdir /apps/st1
+hadoop fs -chmod 0777 /apps/st1
+maprcli stream create -path /apps/st1/stream -produceperm p -consumeperm p -topicperm p
+maprcli stream topic create -path /apps/st1/stream -topic cdrs -partitions 1
+maprcli stream topic create -path /apps/st1/stream -topic cdrp -partitions 1
+```
+
+####Produce msgs according to git repo:
+```
+java -cp mapr-streams-spark-1.0.jar:`mapr classpath` com.streamskafka.example.MsgProducer /apps/mapr-streams-spark/stream:cdrs /home/mapr/mapr-streams-spark/sms-call-internet-tn-2013-11-01.txt
+```
+
+```
+java -cp mapr-streams-spark-1.0.jar:`mapr classpath` com.streamskafka.example.MsgProducer /apps/stest/stream:cdrs /home/mapr/mapr-streams-spark/sms-call-internet-tn-2013-11-01.txt
+```
+
+```
+java -cp mapr-streams-spark-1.0.jar:`mapr classpath` com.streamskafka.example.MsgProducer /apps/st1/stream:cdrs /home/mapr/mapr-streams-spark/sms-call-internet-tn-2013-11-01.txt
+```
+###Alternate slower producer using Kafka API:
+```
+while :; do echo -e "$(($RANDOM % 5))\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM" | /opt/mapr/kafka/kafka-0.9.0/bin/kafka-console-producer.sh --broker-list 1:1 --topic /apps/mapr-streams-spark/stream:cdrs; sleep $(($RANDOM % 5)); done
+```
+
+```
+while :; do echo -e "$(($RANDOM % 5))\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM" | /opt/mapr/kafka/kafka-0.9.0/bin/kafka-console-producer.sh --broker-list 1:1 --topic /apps/stest/stream:cdrs; sleep $(($RANDOM % 5)); done
+```
+
+```
+while :; do echo -e "$(($RANDOM % 5))\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM\t$RANDOM" | /opt/mapr/kafka/kafka-0.9.0/bin/kafka-console-producer.sh --broker-list 1:1 --topic /apps/st1/stream:cdrs; sleep $(($RANDOM % 5)); done
+```
+
+####Submit the Spark Kafka Consumer Job:
+```
+/opt/mapr/spark/spark-1.6.1/bin/spark-submit --master yarn-client --class com.sparkkafka.example.SparkKafkaConsumer  mapr-streams-spark-1.0.jar 1:1 /apps/mapr-streams-spark/stream:cdrs /apps/mapr-streams-spark/stream:cdrp
+```
+
+```
+/opt/mapr/spark/spark-1.6.1/bin/spark-submit --master yarn-client --class com.sparkkafka.example.SparkKafkaConsumer  mapr-streams-spark-1.0.jar 1:1 /apps/stest/stream:cdrs /apps/stest/stream:cdrp
+```
+
+```
+/opt/mapr/spark/spark-1.6.1/bin/spark-submit --master yarn-client --class com.sparkkafka.example.SparkKafkaConsumer  mapr-streams-spark-1.0.jar 1:1 /apps/st1/stream:cdrs /apps/st1/stream:cdrp
+```
+
+####Consume New topic
+```
+java -cp mapr-streams-spark-1.0.jar:`mapr classpath` com.streamskafka.example.MsgConsumer /apps/mapr-streams-spark/stream:cdrp
+```
+
+```
+java -cp mapr-streams-spark-1.0.jar:`mapr classpath` com.streamskafka.example.MsgConsumer /apps/stest/stream:cdrp
+```
+
+```
+java -cp mapr-streams-spark-1.0.jar:`mapr classpath` com.streamskafka.example.MsgConsumer /apps/st1/stream:cdrp
+```
+
+##Spark Streaming
+###Using the project park-streaming project:
+
+[spark-streaming-mapr-streams Github project](https://github.com/vicenteg/spark-streaming-mapr-streams)
+###Run Kafka Producer
+```
+while :; do fortune | /opt/mapr/kafka/kafka-0.9.0/bin/kafka-console-producer.sh --broker-list 1:1 --topic /tmp/spark-test-stream:topic1; sleep $(($RANDOM % 5)); done
+```
+
+###Submit to Spark
+```
+mapr@mapredge1:~/spark-streaming-mapr-streams$ /opt/mapr/spark/spark-1.6.1/bin/spark-submit --master yarn-client --class com.mapr.example.SparkConsumer target/SparkConsumer-1.0-SNAPSHOT.jar 1:1 /tmp/spark-test-stream:topic1
+```
+
+###Using other project's MsgConsumer
+```
+java -cp mapr-streams-spark-1.0.jar:`mapr classpath` com.streamskafka.example.MsgConsumer /tmp/spark-test-stream:topic1
+```
+
+
+
+

@@ -5,6 +5,11 @@ mapr_client_servers:
   vars:
     ansible_ssh_user: vagrant
     ansible_ssh_private_key_file: "~/.vagrant.d/insecure_private_key"
+lb_servers:
+  hosts: [ lb1.lan ]
+  vars:
+    ansible_ssh_user: vagrant
+    ansible_ssh_private_key_file: "~/.vagrant.d/insecure_private_key"
 all:
   children: [ mapr_client_servers ]
 _meta:
@@ -15,3 +20,6 @@ _meta:
     mclient2.lan:
       vagrant_cpu: "1"
       vagrant_mem: "4096"
+    lb1.lan:
+      vagrant_cpu: "1"
+      vagrant_mem: "2048"
